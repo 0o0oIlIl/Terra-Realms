@@ -1,0 +1,1031 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Terra Realms</title>
+
+<style>
+html,body{
+  margin:0;width:100%;height:100%;overflow:hidden;
+  background:#75b9e8;
+  touch-action:none;
+  overscroll-behavior:none;
+  -webkit-user-select:none;user-select:none;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+}
+canvas{position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+
+#start{
+  position:fixed;inset:0;z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(#58a9dc,#b9dced);
+}
+#panel{
+  color:white;text-align:center;width:min(600px,88vw);
+  background:#07131dcc;border:1px solid #ffffff44;
+  padding:28px;border-radius:24px;
+  box-shadow:0 30px 80px #0006;
+  backdrop-filter:blur(18px);
+}
+h1{font-size:clamp(36px,8vw,62px);margin:0}
+p{color:#d9ebf5;line-height:1.5}
+button{
+  border:1px solid #ffffff66;background:#ffffffee;color:#13202a;
+  border-radius:16px;padding:14px 24px;font-size:18px;font-weight:800;
+}
+
+#hud{position:fixed;inset:0;z-index:20;pointer-events:none}
+
+#crosshair{
+  position:absolute;left:50%;top:50%;
+  width:18px;height:18px;transform:translate(-50%,-50%);
+}
+#crosshair:before,#crosshair:after{
+  content:"";position:absolute;background:#fff;
+  box-shadow:0 1px 4px #000;
+}
+#crosshair:before{left:8px;width:2px;height:18px}
+#crosshair:after{top:8px;width:18px;height:2px}
+
+#stats{
+  position:absolute;
+  top:max(10px,env(safe-area-inset-top));
+  left:max(10px,env(safe-area-inset-left));
+  color:white;background:#0007;padding:7px 10px;border-radius:10px;
+  font-size:12px;
+}
+
+#stickZone{
+  pointer-events:auto;
+  position:absolute;
+  left:max(12px,env(safe-area-inset-left));
+  bottom:max(20px,env(safe-area-inset-bottom));
+  width:150px;height:150px;border-radius:50%;
+}
+#stickBase{
+  position:absolute;left:25px;top:25px;width:100px;height:100px;
+  border-radius:50%;background:#ffffff18;border:2px solid #ffffff38;
+  backdrop-filter:blur(4px);
+}
+#stick{
+  position:absolute;left:50%;top:50%;width:50px;height:50px;
+  transform:translate(-50%,-50%);
+  background:#ffffff77;border:2px solid #fff9;border-radius:50%;
+  box-shadow:0 4px 20px #0004;
+}
+
+#lookZone{
+  pointer-events:auto;
+  position:absolute;left:43%;right:0;top:0;bottom:0;
+}
+
+.action{
+  pointer-events:auto;position:absolute;
+  width:64px;height:64px;padding:0;border-radius:50%;
+  color:white;background:#101a25a8;border:2px solid #ffffff66;
+  font-size:11px;font-weight:900;
+  backdrop-filter:blur(8px);
+}
+#jump{
+  right:max(25px,env(safe-area-inset-right));
+  bottom:max(35px,env(safe-area-inset-bottom));
+}
+#mine{
+  right:max(102px,calc(env(safe-area-inset-right) + 77px));
+  bottom:max(25px,env(safe-area-inset-bottom));
+}
+#place{
+  right:max(28px,env(safe-area-inset-right));
+  bottom:max(112px,calc(env(safe-area-inset-bottom) + 87px));
+}
+#sprint{
+  left:max(148px,calc(env(safe-area-inset-left) + 136px));
+  bottom:max(135px,calc(env(safe-area-inset-bottom) + 110px));
+  width:55px;height:55px;
+}
+
+#hotbar{
+  pointer-events:auto;
+  position:absolute;left:50%;
+  bottom:max(12px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  display:flex;gap:4px;padding:5px;
+  border-radius:12px;background:#07111baa;
+}
+.slot{
+  width:42px;height:42px;border:2px solid #ffffff38;
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  color:white;font-size:10px;
+}
+.slot.selected{border-color:white;transform:translateY(-4px)}
+.swatch{width:25px;height:25px;border-radius:5px;box-shadow:inset 0 0 8px #0005}
+
+@media(max-width:700px){
+  .slot{width:36px;height:36px}
+  .swatch{width:21px;height:21px}
+}
+</style>
+</head>
+
+<body>
+
+<div id="start">
+  <div id="panel">
+    <h1>TERRA REALMS</h1>
+    <p>
+      iPad Safari voxel world<br>
+      Left thumb moves · Drag right side to look<br>
+      Mine, place, jump and sprint with the on-screen controls
+    </p>
+    <button id="play">PLAY</button>
+  </div>
+</div>
+
+<div id="hud">
+  <div id="stats">Loading world…</div>
+  <div id="crosshair"></div>
+
+  <div id="stickZone">
+    <div id="stickBase"><div id="stick"></div></div>
+  </div>
+
+  <div id="lookZone"></div>
+
+  <button class="action" id="jump">JUMP</button>
+  <button class="action" id="mine">MINE</button>
+  <button class="action" id="place">PLACE</button>
+  <button class="action" id="sprint">RUN</button>
+
+  <div id="hotbar"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports":{
+    "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+
+/* =========================================================
+   RENDERER
+========================================================= */
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x8bc9ed);
+scene.fog = new THREE.FogExp2(0xaed6eb, 0.016);
+
+const camera = new THREE.PerspectiveCamera(
+  72, innerWidth / innerHeight, .05, 180
+);
+
+const renderer = new THREE.WebGLRenderer({
+  antialias:false,
+  powerPreference:"high-performance",
+  alpha:false
+});
+
+/*
+  Limit resolution on mobile Safari.
+  This matters enormously for iPad performance.
+*/
+const ipad =
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+renderer.setPixelRatio(
+  Math.min(devicePixelRatio, ipad ? 1.35 : 1.75)
+);
+
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+document.body.prepend(renderer.domElement);
+
+/* =========================================================
+   LIGHTING
+========================================================= */
+
+scene.add(new THREE.HemisphereLight(0xc9ecff,0x334129,1.5));
+
+const sun = new THREE.DirectionalLight(0xfff0cf,3.2);
+sun.position.set(40,65,25);
+sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left=-45;
+sun.shadow.camera.right=45;
+sun.shadow.camera.top=45;
+sun.shadow.camera.bottom=-45;
+sun.shadow.camera.near=.1;
+sun.shadow.camera.far=140;
+sun.shadow.bias=-.001;
+scene.add(sun);
+
+/* =========================================================
+   ORIGINAL PROCEDURAL TEXTURES
+========================================================= */
+
+function makeTexture(base,dots){
+  const c=document.createElement("canvas");
+  c.width=c.height=64;
+
+  const g=c.getContext("2d");
+  g.fillStyle=base;
+  g.fillRect(0,0,64,64);
+
+  for(let i=0;i<650;i++){
+    const a=Math.random()*.13;
+    g.fillStyle=`rgba(0,0,0,${a})`;
+    g.fillRect(Math.random()*64,Math.random()*64,1,1);
+  }
+
+  for(let i=0;i<dots;i++){
+    g.fillStyle=Math.random()>.5?"#ffffff18":"#00000020";
+    const s=1+Math.random()*2;
+    g.fillRect(Math.random()*64,Math.random()*64,s,s);
+  }
+
+  const t=new THREE.CanvasTexture(c);
+  t.colorSpace=THREE.SRGBColorSpace;
+  t.magFilter=THREE.NearestFilter;
+  t.minFilter=THREE.LinearMipmapLinearFilter;
+  return t;
+}
+
+const mats={
+  grass:new THREE.MeshStandardMaterial({
+    map:makeTexture("#4f843d",100),roughness:.95
+  }),
+  dirt:new THREE.MeshStandardMaterial({
+    map:makeTexture("#745038",110),roughness:1
+  }),
+  stone:new THREE.MeshStandardMaterial({
+    map:makeTexture("#737979",130),roughness:.92
+  }),
+  sand:new THREE.MeshStandardMaterial({
+    map:makeTexture("#c8b477",70),roughness:.9
+  }),
+  wood:new THREE.MeshStandardMaterial({
+    map:makeTexture("#76502f",100),roughness:.9
+  }),
+  leaves:new THREE.MeshStandardMaterial({
+    map:makeTexture("#356a32",160),roughness:1
+  })
+};
+
+const TYPES=["grass","dirt","stone","sand","wood","leaves"];
+const COLORS=["#4f843d","#745038","#737979","#c8b477","#76502f","#356a32"];
+
+/* =========================================================
+   INSTANCED VOXEL WORLD
+
+   Unlike the first prototype, terrain cubes of each material
+   are rendered in large batches. This greatly reduces draw
+   calls and is much more suitable for Safari/iPad.
+========================================================= */
+
+const cube=new THREE.BoxGeometry(1,1,1);
+
+const blockData=new Map();
+const terrainGroups={};
+
+const K=(x,y,z)=>`${x},${y},${z}`;
+
+function heightAt(x,z){
+  const large =
+      Math.sin(x*.115)*1.8 +
+      Math.cos(z*.097)*1.6 +
+      Math.sin((x+z)*.055)*1.5;
+
+  const detail =
+      Math.sin(x*.32+z*.17)*.65 +
+      Math.cos(z*.27-x*.12)*.45;
+
+  const mountain=Math.max(
+    0,
+    Math.sin((x+12)*.05)*Math.cos((z-8)*.044)
+  )*3.7;
+
+  return Math.floor(6+large+detail+mountain);
+}
+
+const RADIUS=22;
+const WATER=5;
+const generated=[];
+
+function record(x,y,z,type,breakable=false){
+  const k=K(x,y,z);
+  if(blockData.has(k))return;
+
+  blockData.set(k,{x,y,z,type,breakable});
+  generated.push({x,y,z,type});
+}
+
+for(let x=-RADIUS;x<=RADIUS;x++){
+  for(let z=-RADIUS;z<=RADIUS;z++){
+
+    const h=heightAt(x,z);
+
+    /*
+      Only create the upper terrain layers.
+      Buried blocks are unnecessary geometry.
+    */
+    for(let y=Math.max(0,h-4);y<=h;y++){
+      let type="stone";
+
+      if(y===h)
+        type=h<=WATER+1?"sand":"grass";
+      else if(y>=h-2)
+        type="dirt";
+
+      record(x,y,z,type,false);
+    }
+
+    const r=Math.abs(
+      Math.sin(x*91.231+z*37.719)*17413.13
+    )%1;
+
+    if(h>WATER+1 && r>.972 && Math.abs(x)>3){
+
+      const trunk=3;
+
+      for(let y=1;y<=trunk;y++)
+        record(x,h+y,z,"wood",true);
+
+      for(let dx=-2;dx<=2;dx++)
+      for(let dz=-2;dz<=2;dz++)
+      for(let dy=-1;dy<=2;dy++){
+
+        if(
+          Math.abs(dx)+
+          Math.abs(dz)+
+          Math.abs(dy)<4
+        ){
+          record(
+            x+dx,
+            h+trunk+dy,
+            z+dz,
+            "leaves",
+            true
+          );
+        }
+      }
+    }
+  }
+}
+
+function rebuildTerrain(){
+
+  for(const type of TYPES){
+    if(terrainGroups[type])
+      scene.remove(terrainGroups[type]);
+  }
+
+  const grouped={};
+
+  for(const type of TYPES)grouped[type]=[];
+
+  blockData.forEach(b=>grouped[b.type].push(b));
+
+  const dummy=new THREE.Object3D();
+
+  for(const type of TYPES){
+
+    const list=grouped[type];
+
+    const mesh=new THREE.InstancedMesh(
+      cube,
+      mats[type],
+      Math.max(1,list.length)
+    );
+
+    mesh.count=list.length;
+    mesh.receiveShadow=true;
+
+    /*
+      Casting thousands of individual voxel shadows is expensive.
+      Only wood/leaves cast dynamic shadows in this mobile build.
+    */
+    mesh.castShadow=type==="wood" || type==="leaves";
+
+    mesh.userData.blockList=list;
+
+    list.forEach((b,i)=>{
+      dummy.position.set(b.x+.5,b.y+.5,b.z+.5);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i,dummy.matrix);
+    });
+
+    mesh.instanceMatrix.needsUpdate=true;
+
+    terrainGroups[type]=mesh;
+    scene.add(mesh);
+  }
+}
+
+rebuildTerrain();
+
+/* =========================================================
+   WATER
+========================================================= */
+
+const waterMat=new THREE.MeshPhysicalMaterial({
+  color:0x287fa4,
+  transparent:true,
+  opacity:.68,
+  roughness:.14,
+  metalness:.05
+});
+
+const water=new THREE.Mesh(
+  new THREE.PlaneGeometry(RADIUS*2+4,RADIUS*2+4,18,18),
+  waterMat
+);
+
+water.rotation.x=-Math.PI/2;
+water.position.y=WATER+.7;
+scene.add(water);
+
+/* =========================================================
+   PLAYER
+========================================================= */
+
+const player={
+  pos:new THREE.Vector3(0,heightAt(0,0)+2,0),
+  velocity:new THREE.Vector3(),
+  yaw:0,
+  pitch:-.1,
+  radius:.29,
+  height:1.72,
+  grounded:false
+};
+
+function solid(x,y,z){
+  return blockData.has(K(
+    Math.floor(x),
+    Math.floor(y),
+    Math.floor(z)
+  ));
+}
+
+function collision(p){
+
+  const minX=Math.floor(p.x-player.radius);
+  const maxX=Math.floor(p.x+player.radius);
+
+  const minZ=Math.floor(p.z-player.radius);
+  const maxZ=Math.floor(p.z+player.radius);
+
+  const minY=Math.floor(p.y);
+  const maxY=Math.floor(p.y+player.height-.05);
+
+  for(let x=minX;x<=maxX;x++)
+  for(let z=minZ;z<=maxZ;z++)
+  for(let y=minY;y<=maxY;y++)
+    if(solid(x,y,z))return true;
+
+  return false;
+}
+
+function movePlayer(x,y,z){
+
+  player.pos.x+=x;
+  if(collision(player.pos))
+    player.pos.x-=x;
+
+  player.pos.z+=z;
+  if(collision(player.pos))
+    player.pos.z-=z;
+
+  player.pos.y+=y;
+
+  if(collision(player.pos)){
+    player.pos.y-=y;
+
+    if(y<0)
+      player.grounded=true;
+
+    player.velocity.y=0;
+  }
+  else if(y<0){
+    player.grounded=false;
+  }
+}
+
+/* =========================================================
+   TOUCH JOYSTICK
+========================================================= */
+
+let joyX=0;
+let joyY=0;
+let joyID=null;
+
+const stickZone=document.querySelector("#stickZone");
+const stick=document.querySelector("#stick");
+
+function updateStick(x,y){
+
+  const r=stickZone.getBoundingClientRect();
+
+  const cx=r.left+r.width/2;
+  const cy=r.top+r.height/2;
+
+  let dx=x-cx;
+  let dy=y-cy;
+
+  const max=43;
+  const len=Math.hypot(dx,dy);
+
+  if(len>max){
+    dx=dx/len*max;
+    dy=dy/len*max;
+  }
+
+  joyX=dx/max;
+  joyY=dy/max;
+
+  stick.style.transform=
+    `translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
+}
+
+stickZone.addEventListener("pointerdown",e=>{
+  joyID=e.pointerId;
+  stickZone.setPointerCapture(e.pointerId);
+  updateStick(e.clientX,e.clientY);
+});
+
+stickZone.addEventListener("pointermove",e=>{
+  if(e.pointerId===joyID)
+    updateStick(e.clientX,e.clientY);
+});
+
+function stopStick(e){
+  if(e.pointerId!==joyID)return;
+
+  joyID=null;
+  joyX=joyY=0;
+  stick.style.transform="translate(-50%,-50%)";
+}
+
+stickZone.addEventListener("pointerup",stopStick);
+stickZone.addEventListener("pointercancel",stopStick);
+
+/* =========================================================
+   TOUCH LOOK
+========================================================= */
+
+const lookZone=document.querySelector("#lookZone");
+
+let lookID=null;
+let oldX=0;
+let oldY=0;
+
+lookZone.addEventListener("pointerdown",e=>{
+  lookID=e.pointerId;
+  oldX=e.clientX;
+  oldY=e.clientY;
+  lookZone.setPointerCapture(e.pointerId);
+});
+
+lookZone.addEventListener("pointermove",e=>{
+
+  if(e.pointerId!==lookID)return;
+
+  const dx=e.clientX-oldX;
+  const dy=e.clientY-oldY;
+
+  oldX=e.clientX;
+  oldY=e.clientY;
+
+  player.yaw-=dx*.005;
+  player.pitch-=dy*.0045;
+
+  player.pitch=Math.max(
+    -1.48,
+    Math.min(1.48,player.pitch)
+  );
+});
+
+function stopLook(e){
+  if(e.pointerId===lookID)lookID=null;
+}
+
+lookZone.addEventListener("pointerup",stopLook);
+lookZone.addEventListener("pointercancel",stopLook);
+
+/* =========================================================
+   DESKTOP KEYBOARD SUPPORT TOO
+========================================================= */
+
+const keys={};
+
+addEventListener("keydown",e=>{
+  keys[e.code]=true;
+
+  if(/^Digit[1-6]$/.test(e.code)){
+    selected=Number(e.code.slice(-1))-1;
+    updateHotbar();
+  }
+});
+
+addEventListener("keyup",e=>{
+  keys[e.code]=false;
+});
+
+/* =========================================================
+   HOTBAR
+========================================================= */
+
+let selected=0;
+
+const hotbar=document.querySelector("#hotbar");
+
+TYPES.forEach((type,i)=>{
+
+  const slot=document.createElement("div");
+
+  slot.className=
+    "slot"+(i===0?" selected":"");
+
+  slot.innerHTML=
+    `<div class="swatch"
+      style="background:${COLORS[i]}"></div>`;
+
+  slot.addEventListener("pointerdown",e=>{
+    e.stopPropagation();
+    selected=i;
+    updateHotbar();
+  });
+
+  hotbar.appendChild(slot);
+});
+
+function updateHotbar(){
+  [...hotbar.children].forEach((s,i)=>{
+    s.classList.toggle("selected",i===selected);
+  });
+}
+
+/* =========================================================
+   RAYCAST / BLOCK INTERACTION
+========================================================= */
+
+const ray=new THREE.Raycaster();
+ray.far=6;
+
+function target(){
+
+  ray.setFromCamera(
+    new THREE.Vector2(0,0),
+    camera
+  );
+
+  const meshes=Object.values(terrainGroups);
+
+  const hits=ray.intersectObjects(meshes,false);
+
+  if(!hits.length)return null;
+
+  const hit=hits[0];
+  const list=hit.object.userData.blockList;
+  const block=list?.[hit.instanceId];
+
+  if(!block)return null;
+
+  return {hit,block};
+}
+
+function mine(){
+
+  const t=target();
+  if(!t)return;
+
+  const b=t.block;
+
+  /*
+    Let the player mine generated surface blocks as well.
+  */
+  blockData.delete(K(b.x,b.y,b.z));
+
+  rebuildTerrain();
+}
+
+function place(){
+
+  const t=target();
+  if(!t)return;
+
+  const b=t.block;
+
+  /*
+    Convert hit normal from mesh-space.
+    Our instanced blocks aren't rotated, so this maps directly.
+  */
+  const n=t.hit.face.normal;
+
+  const x=b.x+Math.round(n.x);
+  const y=b.y+Math.round(n.y);
+  const z=b.z+Math.round(n.z);
+
+  const k=K(x,y,z);
+
+  if(blockData.has(k))return;
+
+  blockData.set(k,{
+    x,y,z,
+    type:TYPES[selected],
+    breakable:true
+  });
+
+  /*
+    Prevent placing a block inside the player.
+  */
+  if(collision(player.pos)){
+    blockData.delete(k);
+    return;
+  }
+
+  rebuildTerrain();
+}
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+const jump=document.querySelector("#jump");
+const mineButton=document.querySelector("#mine");
+const placeButton=document.querySelector("#place");
+const sprintButton=document.querySelector("#sprint");
+
+function buttonEvent(element,fn){
+  element.addEventListener("pointerdown",e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    fn();
+  });
+}
+
+buttonEvent(jump,()=>{
+  if(player.grounded){
+    player.velocity.y=7;
+    player.grounded=false;
+  }
+});
+
+buttonEvent(mineButton,mine);
+buttonEvent(placeButton,place);
+
+let sprint=false;
+
+sprintButton.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  e.stopPropagation();
+  sprint=true;
+  sprintButton.style.background="#ffffff55";
+});
+
+function endSprint(){
+  sprint=false;
+  sprintButton.style.background="";
+}
+
+sprintButton.addEventListener("pointerup",endSprint);
+sprintButton.addEventListener("pointercancel",endSprint);
+
+/* =========================================================
+   TARGET OUTLINE
+========================================================= */
+
+const outline=new THREE.LineSegments(
+  new THREE.EdgesGeometry(
+    new THREE.BoxGeometry(1.015,1.015,1.015)
+  ),
+  new THREE.LineBasicMaterial({
+    color:0xffffff,
+    transparent:true,
+    opacity:.85
+  })
+);
+
+outline.visible=false;
+scene.add(outline);
+
+/* =========================================================
+   START
+========================================================= */
+
+const start=document.querySelector("#start");
+
+document.querySelector("#play").onclick=async()=>{
+
+  start.style.display="none";
+
+  /*
+    Request fullscreen where Safari allows it.
+    iPad Safari behavior varies by version.
+  */
+  try{
+    if(document.documentElement.requestFullscreen)
+      await document.documentElement.requestFullscreen();
+  }catch{}
+
+};
+
+/* =========================================================
+   GAME LOOP
+========================================================= */
+
+const clock=new THREE.Clock();
+const stats=document.querySelector("#stats");
+
+let elapsed=0;
+let fpsFrames=0;
+let fpsTime=0;
+let displayedFPS=60;
+
+function update(dt){
+
+  let x=joyX;
+  let y=joyY;
+
+  if(keys.KeyA)x-=1;
+  if(keys.KeyD)x+=1;
+  if(keys.KeyW)y-=1;
+  if(keys.KeyS)y+=1;
+
+  const length=Math.hypot(x,y);
+
+  if(length>1){
+    x/=length;
+    y/=length;
+  }
+
+  const forwardX=-Math.sin(player.yaw);
+  const forwardZ=-Math.cos(player.yaw);
+
+  const rightX=Math.cos(player.yaw);
+  const rightZ=-Math.sin(player.yaw);
+
+  const run=
+    sprint ||
+    keys.ShiftLeft ||
+    keys.ShiftRight;
+
+  const speed=run?7.1:4.5;
+
+  const mx=
+    forwardX*(-y)+
+    rightX*x;
+
+  const mz=
+    forwardZ*(-y)+
+    rightZ*x;
+
+  if(keys.Space && player.grounded){
+    player.velocity.y=7;
+    player.grounded=false;
+  }
+
+  player.velocity.y-=18*dt;
+  player.velocity.y=Math.max(-22,player.velocity.y);
+
+  movePlayer(
+    mx*speed*dt,
+    player.velocity.y*dt,
+    mz*speed*dt
+  );
+
+  if(player.pos.y<-10){
+    player.pos.set(
+      0,
+      heightAt(0,0)+3,
+      0
+    );
+    player.velocity.set(0,0,0);
+  }
+
+  camera.position.set(
+    player.pos.x,
+    player.pos.y+1.57,
+    player.pos.z
+  );
+
+  camera.rotation.order="YXZ";
+  camera.rotation.y=player.yaw;
+  camera.rotation.x=player.pitch;
+
+  /*
+    Keep shadow detail near the player.
+  */
+  sun.target.position.set(
+    player.pos.x,
+    0,
+    player.pos.z
+  );
+
+  sun.position.set(
+    player.pos.x+38,
+    62,
+    player.pos.z+24
+  );
+
+  scene.add(sun.target);
+
+  elapsed+=dt;
+
+  /*
+    Lightweight water animation.
+  */
+  water.position.y=
+    WATER+.68+
+    Math.sin(elapsed*1.5)*.025;
+
+  const t=target();
+
+  if(t){
+    outline.visible=true;
+    outline.position.set(
+      t.block.x+.5,
+      t.block.y+.5,
+      t.block.z+.5
+    );
+  }else{
+    outline.visible=false;
+  }
+
+  fpsFrames++;
+  fpsTime+=dt;
+
+  if(fpsTime>.5){
+    displayedFPS=Math.round(fpsFrames/fpsTime);
+    fpsFrames=0;
+    fpsTime=0;
+
+    stats.textContent=
+      `${displayedFPS} FPS · `+
+      `${TYPES[selected].toUpperCase()} · `+
+      `X ${player.pos.x.toFixed(0)} `+
+      `Y ${player.pos.y.toFixed(0)} `+
+      `Z ${player.pos.z.toFixed(0)}`;
+  }
+}
+
+function loop(){
+
+  requestAnimationFrame(loop);
+
+  const dt=Math.min(clock.getDelta(),.04);
+
+  if(start.style.display==="none")
+    update(dt);
+
+  renderer.render(scene,camera);
+}
+
+loop();
+
+/* =========================================================
+   RESIZE / ORIENTATION
+========================================================= */
+
+function resize(){
+
+  camera.aspect=
+    innerWidth/innerHeight;
+
+  camera.updateProjectionMatrix();
+
+  renderer.setPixelRatio(
+    Math.min(
+      devicePixelRatio,
+      ipad?1.35:1.75
+    )
+  );
+
+  renderer.setSize(
+    innerWidth,
+    innerHeight,
+    false
+  );
+}
+
+addEventListener("resize",resize);
+addEventListener("orientationchange",()=>{
+  setTimeout(resize,250);
+});
+
+</script>
+</body>
+</html>
